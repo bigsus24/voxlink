@@ -2,22 +2,20 @@ use tauri::State;
 use serde::{Serialize, Deserialize};
 use crate::state::AppState;
 
+/// Toggle mute state
+#[tauri::command]
+pub async fn toggle_mute(state: State<'_, AppState>) -> Result<bool, String> {
+    let mut muted = state.is_muted.write();
+    *muted = !*muted;
+    let new_state = *muted;
+    tracing::debug!("Mute toggled: {}", new_state);
+    Ok(new_state)
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AudioDevice {
     pub name: String,
     pub is_input: bool,
-}
-
-/// Toggle mute state
-#[tauri::command]
-pub async fn toggle_mute(state: State<'_, AppState>) -> Result<bool, String> {
-    if let Some(pipeline) = state.voice_pipeline.write().as_mut() {
-        let new_mute = !pipeline.is_muted();
-        pipeline.set_muted(new_mute);
-        Ok(new_mute)
-    } else {
-        Ok(false)
-    }
 }
 
 /// Get available audio devices
