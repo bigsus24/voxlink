@@ -2,7 +2,7 @@ use tokio::net::UdpSocket;
 use std::net::SocketAddr;
 use std::time::Duration;
 use crate::protocol::packet::{
-    ControlPacket, DiscoveryAnnouncePayload, PacketHeader, PacketError,
+    ControlPacket, DiscoveryAnnouncePayload, PacketError,
 };
 use crate::protocol::types::PacketType;
 use crate::DISCOVERY_PORT;
