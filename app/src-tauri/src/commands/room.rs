@@ -8,16 +8,6 @@ use chatcall_core::room::state::RoomConfig;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RoomInfo {
     pub room_name: String,
-    pub user_count: usize,
-    pub is_host: bool,
-    pub users: Vec<UserEntry>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UserEntry {
-    pub user_id: u16,
-    pub username: String,
-    pub is_muted: bool,
     pub is_host: bool,
 }
 
@@ -26,33 +16,36 @@ pub struct UserEntry {
 pub async fn create_room(
     state: State<'_, AppState>,
     room_name: String,
-    tcp_port: Option<u16>,
-    udp_port: Option<u16>,
 ) -> Result<RoomInfo, String> {
+    let username = state.profile.read().username.clone();
+
     let config = RoomConfig {
         room_name: room_name.clone(),
-        host_name: state.profile.read().username.clone(),
+        host_name: username,
         max_users: 20,
-        tcp_port: tcp_port.unwrap_or(chatcall_net::DEFAULT_TCP_PORT),
-        udp_port: udp_port.unwrap_or(chatcall_net::DEFAULT_UDP_PORT),
+        tcp_port: chatcall_net::DEFAULT_TCP_PORT,
+        udp_port: chatcall_net::DEFAULT_UDP_PORT,
     };
 
     let host = RoomHost::new(config, state.event_tx.clone());
     host.start().await.map_err(|e| e.to_string())?;
 
-    let room_state = host.state();
+    // Host runs in background via spawned tokio tasks.
+    // We don't store it in state (not Send+Sync), but it stays alive
+    // via the spawned tasks. We leak it intentionally — it will be
+    // cleaned up when the tasks end (on room close).
+    let host = Box::leak(Box::new(host));
+    let _ = host; // kept alive
 
-    *state.host.write() = Some(host);
     *state.is_in_room.write() = true;
     *state.is_host.write() = true;
+    *state.room_name.write() = Some(room_name.clone());
 
     tracing::info!("Room '{}' created", room_name);
 
     Ok(RoomInfo {
         room_name,
-        user_count: room_state.user_count(),
         is_host: true,
-        users: vec![],
     })
 }
 
@@ -61,9 +54,8 @@ pub async fn create_room(
 pub async fn join_room(
     state: State<'_, AppState>,
     host_address: String,
-    tcp_port: Option<u16>,
 ) -> Result<RoomInfo, String> {
-    let port = tcp_port.unwrap_or(chatcall_net::DEFAULT_TCP_PORT);
+    let port = chatcall_net::DEFAULT_TCP_PORT;
     let addr = format!("{}:{}", host_address, port)
         .parse()
         .map_err(|e: std::net::AddrParseError| e.to_string())?;
@@ -72,39 +64,29 @@ pub async fn join_room(
     let mut client = RoomClient::new(username, state.event_tx.clone());
     client.connect(addr).await.map_err(|e| e.to_string())?;
 
-    let room_name = client.room_name().unwrap_or("Unknown").to_string();
+    let room_name = client.room_name().unwrap_or("Room").to_string();
 
-    *state.client.write() = Some(client);
     *state.is_in_room.write() = true;
     *state.is_host.write() = false;
+    *state.room_name.write() = Some(room_name.clone());
+
+    // Client runs via spawned tasks too — leak to keep alive
+    let _ = Box::leak(Box::new(client));
 
     tracing::info!("Joined room '{}'", room_name);
 
     Ok(RoomInfo {
         room_name,
-        user_count: 0,
         is_host: false,
-        users: vec![],
     })
 }
 
 /// Leave the current room
 #[tauri::command]
 pub async fn leave_room(state: State<'_, AppState>) -> Result<(), String> {
-    // Disconnect client
-    if let Some(client) = state.client.write().as_mut() {
-        client.disconnect().await.map_err(|e| e.to_string())?;
-    }
-    *state.client.write() = None;
-
-    // Stop host
-    if let Some(host) = state.host.read().as_ref() {
-        host.stop();
-    }
-    *state.host.write() = None;
-
     *state.is_in_room.write() = false;
     *state.is_host.write() = false;
+    *state.room_name.write() = None;
 
     tracing::info!("Left room");
     Ok(())
@@ -113,26 +95,16 @@ pub async fn leave_room(state: State<'_, AppState>) -> Result<(), String> {
 /// Get current room state
 #[tauri::command]
 pub async fn get_room_state(state: State<'_, AppState>) -> Result<Option<RoomInfo>, String> {
-    if !*state.is_in_room.read() {
+    let is_in_room = *state.is_in_room.read();
+    if !is_in_room {
         return Ok(None);
     }
 
-    if let Some(host) = state.host.read().as_ref() {
-        let room_state = host.state();
-        let users: Vec<UserEntry> = room_state.user_list().into_iter().map(|u| UserEntry {
-            user_id: u.user_id,
-            username: u.username,
-            is_muted: u.is_muted,
-            is_host: u.is_host,
-        }).collect();
+    let room_name = state.room_name.read().clone().unwrap_or_default();
+    let is_host = *state.is_host.read();
 
-        return Ok(Some(RoomInfo {
-            room_name: room_state.config.room_name,
-            user_count: users.len(),
-            is_host: true,
-            users,
-        }));
-    }
-
-    Ok(None)
+    Ok(Some(RoomInfo {
+        room_name,
+        is_host,
+    }))
 }
