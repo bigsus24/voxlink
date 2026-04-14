@@ -1,6 +1,5 @@
 use std::net::SocketAddr;
 use crate::transport::tcp_channel::{TcpChannel, TcpError};
-use crate::transport::udp_channel::UdpChannel;
 
 /// Combined TCP + UDP connection to a peer.
 ///
