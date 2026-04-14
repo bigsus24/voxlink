@@ -1,8 +1,6 @@
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tokio::sync::mpsc;
 use parking_lot::RwLock;
 
 use chatcall_net::transport::tcp_channel::TcpChannel;
@@ -12,8 +10,6 @@ use chatcall_net::protocol::types::PacketType;
 use chatcall_net::crypto::keypair::KeyPair;
 use chatcall_net::crypto::session_key::SessionKeys;
 use chatcall_net::discovery::lan::LanDiscovery;
-use chatcall_net::reliability::ack_tracker::AckTracker;
-use chatcall_net::reliability::ordering::MessageOrderer;
 
 use crate::room::state::{RoomConfig, RoomState};
 use crate::events::{RoomEvent, EventSender};
@@ -38,6 +34,7 @@ pub enum HostError {
 }
 
 /// Client connection state tracked by the host
+#[allow(dead_code)]
 struct ClientConnection {
     tcp: TcpChannel,
     session_keys: SessionKeys,
@@ -206,7 +203,7 @@ impl RoomHost {
         let host_keypair = KeyPair::generate();
         let host_pub = host_keypair.public_key_bytes();
         let shared_secret = host_keypair.diffie_hellman(&handshake.public_key);
-        let session_keys = SessionKeys::derive(shared_secret.as_bytes(), true);
+        let _session_keys = SessionKeys::derive(shared_secret.as_bytes(), true);
 
         // ── Step 3: Assign user ID and send handshake ACK ────
         let user_id = {
@@ -315,14 +312,14 @@ impl RoomHost {
     /// broadcasts them to all other clients.
     async fn udp_relay_loop(
         udp: UdpChannel,
-        state: Arc<RwLock<RoomState>>,
+        _state: Arc<RwLock<RoomState>>,
         is_running: Arc<RwLock<bool>>,
     ) {
         let mut buf = [0u8; chatcall_net::MAX_UDP_PACKET_SIZE];
 
         while *is_running.read() {
             match udp.recv_from(&mut buf).await {
-                Ok((n, addr)) => {
+                Ok((n, _addr)) => {
                     // Parse the voice packet to get the sender's user_id
                     if let Ok(voice) = VoicePacket::from_bytes(&buf[..n]) {
                         // Relay to all other peers
