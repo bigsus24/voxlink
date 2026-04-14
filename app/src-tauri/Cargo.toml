@@ -13,6 +13,7 @@ serde_json = "1"
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 parking_lot = { workspace = true }
+uuid = { workspace = true }
 tauri = { version = "2", features = [] }
 tauri-build = { version = "2", features = [] }
 
