@@ -12,7 +12,6 @@ use chatcall_net::crypto::session_key::SessionKeys;
 use chatcall_net::crypto::cipher::SessionCipher;
 use chatcall_net::reliability::ack_tracker::AckTracker;
 
-use crate::room::state::RoomState;
 use crate::events::{RoomEvent, EventSender};
 
 /// Error type for client operations
