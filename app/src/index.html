@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChatCall — P2P Voice & Chat</title>
+  <meta name="description" content="Lightweight peer-to-peer voice and text communication. No servers, no cloud. Just connect." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <link rel="stylesheet" href="styles/animations.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ── LOBBY VIEW ───────────────────────── -->
+    <div id="lobby-view" class="view active">
+      <div class="lobby-container">
+        <div class="lobby-hero">
+          <div class="logo-pulse">
+            <div class="logo-ring"></div>
+            <div class="logo-ring delay-1"></div>
+            <div class="logo-ring delay-2"></div>
+            <div class="logo-icon">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M24 4C12.95 4 4 12.95 4 24s8.95 20 20 20 20-8.95 20-20S35.05 4 24 4z" fill="url(#logo-grad)" opacity="0.15"/>
+                <path d="M17 20c0-3.87 3.13-7 7-7s7 3.13 7 7v4c0 3.87-3.13 7-7 7s-7-3.13-7-7v-4z" stroke="url(#logo-grad)" stroke-width="2.5" fill="none"/>
+                <path d="M12 22v2c0 6.63 5.37 12 12 12s12-5.37 12-12v-2" stroke="url(#logo-grad)" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="24" y1="36" x2="24" y2="42" stroke="url(#logo-grad)" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="18" y1="42" x2="30" y2="42" stroke="url(#logo-grad)" stroke-width="2.5" stroke-linecap="round"/>
+                <defs>
+                  <linearGradient id="logo-grad" x1="4" y1="4" x2="44" y2="44">
+                    <stop offset="0%" stop-color="#6C5CE7"/>
+                    <stop offset="50%" stop-color="#A855F7"/>
+                    <stop offset="100%" stop-color="#EC4899"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+          </div>
+          <h1 class="lobby-title">ChatCall</h1>
+          <p class="lobby-subtitle">Peer-to-peer voice & chat. No servers. No cloud. Just connect.</p>
+        </div>
+
+        <div class="lobby-card glass-card">
+          <div class="lobby-username-section">
+            <label class="input-label" for="username-input">Your Name</label>
+            <div class="input-group">
+              <div class="input-avatar" id="username-avatar">U</div>
+              <input type="text" id="username-input" class="text-input" placeholder="Enter your name..." value="User" maxlength="24" />
+            </div>
+          </div>
+
+          <div class="lobby-actions">
+            <button id="btn-create-room" class="btn btn-primary btn-glow">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <span>Host a Room</span>
+            </button>
+            <div class="divider-text"><span>or</span></div>
+            <div class="join-section">
+              <label class="input-label" for="join-address">Host Address</label>
+              <div class="input-group">
+                <input type="text" id="join-address" class="text-input" placeholder="192.168.1.x or IP address" />
+                <button id="btn-join-room" class="btn btn-secondary">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                  <span>Join</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="lobby-status" class="status-bar hidden">
+            <div class="status-spinner"></div>
+            <span class="status-text"></span>
+          </div>
+        </div>
+
+        <div class="lobby-footer">
+          <span class="footer-badge">🔒 End-to-end encrypted</span>
+          <span class="footer-badge">⚡ Ultra-low latency</span>
+          <span class="footer-badge">🖥️ 100% local</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ROOM VIEW ────────────────────────── -->
+    <div id="room-view" class="view">
+      <div class="room-container">
+        <!-- Top bar -->
+        <header class="room-header glass-card">
+          <div class="room-header-left">
+            <button id="btn-leave" class="btn-icon-only" title="Leave Room">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+            <div class="room-info">
+              <h2 id="room-name" class="room-title">Room Name</h2>
+              <span id="room-status" class="room-status-badge">● Connected</span>
+            </div>
+          </div>
+          <div class="room-header-right">
+            <span id="user-count" class="user-count-badge">0 users</span>
+            <button id="btn-settings" class="btn-icon-only" title="Settings">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- Main content area -->
+        <div class="room-main">
+          <!-- User grid (voice area) -->
+          <section class="voice-panel">
+            <div id="user-grid" class="user-grid">
+              <!-- User tiles populated dynamically -->
+              <div class="user-tile self" id="self-tile">
+                <div class="user-avatar-ring">
+                  <div class="voice-ring"></div>
+                  <div class="user-avatar" id="self-avatar">U</div>
+                </div>
+                <span class="user-name" id="self-name">You</span>
+                <div class="user-status-icons">
+                  <span class="mute-icon" id="self-mute-icon" title="Unmuted">🎤</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Voice controls -->
+            <div class="voice-controls glass-card">
+              <button id="btn-mute" class="btn-voice" title="Toggle Mute">
+                <svg id="mic-on-icon" class="voice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/>
+                  <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+                <svg id="mic-off-icon" class="voice-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+                  <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/>
+                  <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+              </button>
+              <div class="voice-meter">
+                <div id="voice-level" class="voice-level-bar"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Chat panel -->
+          <aside class="chat-panel glass-card">
+            <div class="chat-header">
+              <h3>Chat</h3>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+              <div class="chat-empty">
+                <p>No messages yet. Say hi! 👋</p>
+              </div>
+            </div>
+            <div class="chat-input-area">
+              <input type="text" id="chat-input" class="text-input chat-text-input" placeholder="Type a message..." maxlength="500" />
+              <button id="btn-send" class="btn-send" title="Send">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js" type="module"></script>
+</body>
+</html>

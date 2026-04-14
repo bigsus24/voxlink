@@ -1,0 +1,24 @@
+[package]
+name = "chatcall-app"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+chatcall-net = { workspace = true }
+chatcall-audio = { workspace = true }
+chatcall-core = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = "1"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+parking_lot = { workspace = true }
+tauri = { version = "2", features = [] }
+tauri-build = { version = "2", features = [] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+name = "chatcall_app"

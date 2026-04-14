@@ -1,0 +1,56 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/chatcall-net",
+    "crates/chatcall-audio",
+    "crates/chatcall-core",
+    "app/src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["ChatCall Contributors"]
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bincode = "1"
+
+# Encryption
+chacha20poly1305 = "0.10"
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+rand = "0.8"
+
+# Audio
+cpal = "0.15"
+opus = "0.3"
+
+# Storage
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# Utilities
+uuid = { version = "1", features = ["v4", "serde"] }
+bytes = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+parking_lot = "0.12"
+crossbeam-channel = "0.5"
+
+# Internal crates
+chatcall-net = { path = "crates/chatcall-net" }
+chatcall-audio = { path = "crates/chatcall-audio" }
+chatcall-core = { path = "crates/chatcall-core" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

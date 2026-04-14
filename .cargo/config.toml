@@ -1,0 +1,6 @@
+[build]
+# Use MSVC target (default), single job to minimize file contention
+jobs = 1
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "incremental=true"]

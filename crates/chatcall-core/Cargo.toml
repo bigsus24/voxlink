@@ -1,0 +1,20 @@
+[package]
+name = "chatcall-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+chatcall-net = { workspace = true }
+chatcall-audio = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+bincode = { workspace = true }
+rusqlite = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+rand = { workspace = true }
+crossbeam-channel = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
