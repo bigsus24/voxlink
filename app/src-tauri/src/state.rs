@@ -20,6 +20,8 @@ pub struct AppState {
     pub is_host: Arc<RwLock<bool>>,
     pub is_muted: Arc<RwLock<bool>>,
     pub room_name: Arc<RwLock<Option<String>>>,
+    /// The 7-char VoxCode generated when hosting a room
+    pub room_code: Arc<RwLock<Option<String>>>,
 }
 
 impl AppState {
@@ -34,6 +36,7 @@ impl AppState {
             is_host: Arc::new(RwLock::new(false)),
             is_muted: Arc::new(RwLock::new(false)),
             room_name: Arc::new(RwLock::new(None)),
+            room_code: Arc::new(RwLock::new(None)),
         }
     }
 }

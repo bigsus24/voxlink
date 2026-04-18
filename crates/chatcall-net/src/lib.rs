@@ -19,6 +19,7 @@ pub mod crypto;
 pub mod reliability;
 pub mod discovery;
 pub mod serialization;
+pub mod room_code;
 
 pub use protocol::types::PacketType;
 pub use protocol::packet::{PacketHeader, VoicePacket, ChatPacket, ControlPacket};
@@ -29,6 +30,7 @@ pub use crypto::cipher::SessionCipher;
 pub use crypto::keypair::KeyPair;
 pub use discovery::lan::LanDiscovery;
 pub use reliability::ack_tracker::AckTracker;
+pub use room_code::{encode_ip, decode_ip};
 
 /// Protocol magic bytes identifying ChatCall packets
 pub const MAGIC: [u8; 2] = [0xCC, 0xAA];

@@ -13,6 +13,7 @@ const state = {
   isHost: false,
   isMuted: false,
   roomName: '',
+  roomCode: null,
   users: [],
   messages: [],
 };
@@ -49,7 +50,7 @@ function initLobby() {
   // Host a Room
   btnCreate.addEventListener('click', async () => {
     await setUsername(state.username);
-    showStatus('Creating room...');
+    showStatus('Detecting your IP and generating room code...');
 
     try {
       const result = await invoke('create_room', {
@@ -58,30 +59,43 @@ function initLobby() {
       state.isInRoom = true;
       state.isHost = true;
       state.roomName = result.room_name || `${state.username}'s Room`;
+      state.roomCode = result.room_code || null;
       enterRoom();
     } catch (e) {
       showStatus(`Error: ${e}`, true);
     }
   });
 
-  // Join a Room
+  // Join a Room (accepts 7-char VoxCode OR raw IP address)
   btnJoin.addEventListener('click', async () => {
-    const address = joinAddress.value.trim();
-    if (!address) {
-      showStatus('Please enter a host address', true);
+    const input = joinAddress.value.trim();
+    if (!input) {
+      showStatus('Please enter a Room Code or IP address', true);
       return;
     }
 
     await setUsername(state.username);
-    showStatus('Connecting...');
+
+    // Detect: 7-char alphanumeric = VoxCode; otherwise treat as IP
+    const isVoxCode = /^[A-Za-z0-9]{7}$/.test(input);
+
+    if (isVoxCode) {
+      showStatus('Decoding room code...');
+    } else {
+      showStatus('Connecting...');
+    }
 
     try {
-      const result = await invoke('join_room', {
-        hostAddress: address,
-      });
+      const command = isVoxCode ? 'join_by_code' : 'join_room';
+      const args = isVoxCode
+        ? { code: input.toUpperCase() }
+        : { hostAddress: input };
+
+      const result = await invoke(command, args);
       state.isInRoom = true;
       state.isHost = false;
       state.roomName = result.room_name || 'Room';
+      state.roomCode = null;
       enterRoom();
     } catch (e) {
       showStatus(`Connection failed: ${e}`, true);
@@ -108,6 +122,18 @@ function enterRoom() {
   const hue = hashStr(state.username) % 360;
   $('#self-avatar').style.background = `linear-gradient(135deg, hsl(${hue}, 70%, 55%), hsl(${(hue + 40) % 360}, 70%, 50%))`;
 
+  // Show room code and close button for hosts
+  if (state.isHost && state.roomCode) {
+    const badge = $('#room-code-badge');
+    const closeBtn = $('#btn-close-room');
+    badge.classList.remove('hidden');
+    closeBtn.classList.remove('hidden');
+    $('#room-code-value').textContent = state.roomCode;
+  } else {
+    $('#room-code-badge').classList.add('hidden');
+    $('#btn-close-room').classList.add('hidden');
+  }
+
   initRoomControls();
 }
 
@@ -117,19 +143,46 @@ function initRoomControls() {
   const chatInput = $('#chat-input');
   const btnSend = $('#btn-send');
 
-  // Leave room
+  // Leave room (client)
   btnLeave.addEventListener('click', async () => {
-    try {
-      await invoke('leave_room');
-    } catch (e) {
-      console.error('Leave error:', e);
-    }
-    state.isInRoom = false;
-    state.isHost = false;
-    state.users = [];
-    state.messages = [];
+    try { await invoke('leave_room'); } catch (e) { console.error('Leave error:', e); }
+    resetRoomState();
     showView('lobby-view');
   });
+
+  // Close room (host only)
+  const btnClose = $('#btn-close-room');
+  btnClose.addEventListener('click', async () => {
+    try { await invoke('close_room'); } catch (e) { console.error('Close error:', e); }
+    resetRoomState();
+    showView('lobby-view');
+  });
+
+  // Copy room code
+  const btnCopy = $('#btn-copy-code');
+  if (btnCopy) {
+    btnCopy.addEventListener('click', async () => {
+      const code = $('#room-code-value').textContent;
+      try {
+        await navigator.clipboard.writeText(code);
+      } catch {
+        // Fallback for environments without clipboard API
+        const ta = document.createElement('textarea');
+        ta.value = code;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+      // Animate checkmark
+      $('#copy-icon').classList.add('hidden');
+      $('#check-icon').classList.remove('hidden');
+      setTimeout(() => {
+        $('#copy-icon').classList.remove('hidden');
+        $('#check-icon').classList.add('hidden');
+      }, 2000);
+    });
+  }
 
   // Toggle mute
   btnMute.addEventListener('click', async () => {
@@ -250,6 +303,20 @@ function showStatus(text, isError = false) {
 
 function hideStatus() {
   $('#lobby-status').classList.add('hidden');
+}
+
+function resetRoomState() {
+  state.isInRoom = false;
+  state.isHost = false;
+  state.roomCode = null;
+  state.users = [];
+  state.messages = [];
+  // Hide host-only controls
+  $('#room-code-badge').classList.add('hidden');
+  $('#btn-close-room').classList.add('hidden');
+  // Clear chat
+  const container = $('#chat-messages');
+  container.innerHTML = '<div class="chat-empty"><p>No messages yet. Say hi! 👋</p></div>';
 }
 
 // ── Utility functions ───────────────────────────────────────

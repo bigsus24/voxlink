@@ -763,3 +763,102 @@ button, label, .user-tile, .room-header, .voice-controls {
   background: var(--accent-secondary);
   transform: scale(1.05);
 }
+
+/* ── Room Code Badge (host only) ────────────────────────────── */
+.room-code-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: rgba(124, 92, 231, 0.12);
+  border: 1px solid rgba(124, 92, 231, 0.35);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-md);
+  cursor: default;
+  animation: fadeIn 0.4s ease;
+}
+
+.room-code-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--text-accent);
+  text-transform: uppercase;
+}
+
+.room-code-value {
+  font-size: var(--font-size-md);
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  text-shadow: 0 0 14px rgba(168, 85, 247, 0.6);
+}
+
+.btn-copy {
+  width: 28px;
+  height: 28px;
+  background: rgba(124, 92, 231, 0.15);
+  border: 1px solid rgba(124, 92, 231, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--text-accent);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn-copy svg {
+  width: 13px;
+  height: 13px;
+}
+
+.btn-copy:hover {
+  background: rgba(124, 92, 231, 0.3);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+#check-icon {
+  color: var(--success);
+}
+
+/* ── Close Room Button (host only) ──────────────────────────── */
+.btn-close-room {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--danger);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-close-room svg {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-close-room:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: var(--danger);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
+}
+
+/* ── Scale-enter animation for user tiles ───────────────────── */
+.scale-enter {
+  animation: scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
+}

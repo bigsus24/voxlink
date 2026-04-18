@@ -26,7 +26,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::room::create_room,
             commands::room::join_room,
+            commands::room::join_by_code,
             commands::room::leave_room,
+            commands::room::close_room,
             commands::room::get_room_state,
             commands::chat::send_message,
             commands::chat::get_messages,
