@@ -133,6 +133,17 @@ impl RoomHost {
         // Spawn UPnP auto-port-forwarder
         let config_upnp = config.clone();
         let upnp_task = tokio::task::spawn_blocking(move || {
+            // Automatically add Windows Firewall rules if running as Administrator
+            #[cfg(target_os = "windows")]
+            {
+                let _ = std::process::Command::new("netsh")
+                    .args(&["advfirewall", "firewall", "add", "rule", "name=Lake App", "dir=in", "action=allow", "protocol=TCP", &format!("localport={}", config_upnp.tcp_port)])
+                    .output();
+                let _ = std::process::Command::new("netsh")
+                    .args(&["advfirewall", "firewall", "add", "rule", "name=Lake App UDP", "dir=in", "action=allow", "protocol=UDP", &format!("localport={}", config_upnp.udp_port)])
+                    .output();
+            }
+
             tracing::info!("Searching for UPnP Internet Gateway Device...");
             match igd::search_gateway(Default::default()) {
                 Ok(gw) => {
@@ -141,10 +152,15 @@ impl RoomHost {
                         let tcp_addr = std::net::SocketAddrV4::new(local_ip, config_upnp.tcp_port);
                         let udp_addr = std::net::SocketAddrV4::new(local_ip, config_upnp.udp_port);
                         
-                        let _ = gw.add_port(igd::PortMappingProtocol::TCP, config_upnp.tcp_port, tcp_addr, 0, "Lake App TCP");
-                        let _ = gw.add_port(igd::PortMappingProtocol::UDP, config_upnp.udp_port, udp_addr, 0, "Lake App UDP");
+                        // 3600 seconds = 1 hour lease duration. Many modern routers reject 0 (infinite).
+                        let tcp_res = gw.add_port(igd::PortMappingProtocol::TCP, config_upnp.tcp_port, tcp_addr, 3600, "Lake App");
+                        let udp_res = gw.add_port(igd::PortMappingProtocol::UDP, config_upnp.udp_port, udp_addr, 3600, "Lake App UDP");
                         
-                        tracing::info!("UPnP Port Mapping successful! {} / {}", config_upnp.tcp_port, config_upnp.udp_port);
+                        if tcp_res.is_err() || udp_res.is_err() {
+                            tracing::warn!("UPnP Mapping failed (Router denied request). TCP: {:?}, UDP: {:?}", tcp_res.err(), udp_res.err());
+                        } else {
+                            tracing::info!("UPnP Port Mapping successful! {} / {}", config_upnp.tcp_port, config_upnp.udp_port);
+                        }
                     }
                 }
                 Err(e) => {
@@ -184,6 +200,17 @@ impl RoomHost {
         
         // We spawn a short-lived sync task to remove mappings
         tokio::task::spawn_blocking(move || {
+            // Remove firewall rules
+            #[cfg(target_os = "windows")]
+            {
+                let _ = std::process::Command::new("netsh")
+                    .args(&["advfirewall", "firewall", "delete", "rule", "name=Lake App"])
+                    .output();
+                let _ = std::process::Command::new("netsh")
+                    .args(&["advfirewall", "firewall", "delete", "rule", "name=Lake App UDP"])
+                    .output();
+            }
+
             if let Ok(gw) = igd::search_gateway(Default::default()) {
                 let _ = gw.remove_port(igd::PortMappingProtocol::TCP, tcp_port);
                 let _ = gw.remove_port(igd::PortMappingProtocol::UDP, udp_port);
