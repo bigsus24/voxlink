@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicegui-org/nicegui/main/src-tauri/gen/schemas/desktop-schema.json",
-  "productName": "ChatCall",
+  "productName": "Lake",
   "version": "0.1.0",
-  "identifier": "com.chatcall.app",
+  "identifier": "com.lake.app",
   "build": {
     "frontendDist": "../src",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "ChatCall",
+        "title": "Lake",
         "width": 1100,
         "height": 750,
         "minWidth": 800,

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ChatCall — P2P Voice & Chat</title>
-  <meta name="description" content="Lightweight peer-to-peer voice and text communication. No servers, no cloud. Just connect." />
+  <title>Lake</title>
+  <meta name="description" content="Serverless peer-to-peer voice and text communication." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -39,8 +39,7 @@
               </svg>
             </div>
           </div>
-          <h1 class="lobby-title">Voxlink</h1>
-          <p class="lobby-subtitle">Peer-to-peer voice &amp; chat. No servers. No cloud. Just connect.</p>
+          <h1 class="lobby-title">Lake App</h1>
         </div>
 
         <div class="lobby-card glass-card">
@@ -59,9 +58,9 @@
             </button>
             <div class="divider-text"><span>or</span></div>
             <div class="join-section">
-              <label class="input-label" for="join-address">Room Code or IP Address</label>
+              <label class="input-label" for="join-address">Room Code</label>
               <div class="input-group">
-                <input type="text" id="join-address" class="text-input" placeholder="e.g. KM3VXRW or 203.0.113.42" maxlength="40" autocomplete="off" spellcheck="false" />
+                <input type="text" id="join-address" class="text-input" placeholder="e.g. B4K9WMR" maxlength="40" autocomplete="off" spellcheck="false" />
                 <button id="btn-join-room" class="btn btn-secondary">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
                   <span>Join</span>
@@ -75,12 +74,6 @@
             <span class="status-text"></span>
           </div>
         </div>
-
-        <div class="lobby-footer">
-          <span class="footer-badge">🔒 End-to-end encrypted</span>
-          <span class="footer-badge">⚡ Ultra-low latency</span>
-          <span class="footer-badge">🖥️ 100% local</span>
-        </div>
       </div>
     </div>
 
@@ -90,7 +83,7 @@
         <!-- Top bar -->
         <header class="room-header glass-card">
           <div class="room-header-left">
-            <button id="btn-leave" class="btn-icon-only" title="Leave Room">
+            <button id="btn-leave" class="btn-icon-only btn-leave-icon" title="Leave Room">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </button>
             <div class="room-info">
@@ -99,9 +92,8 @@
             </div>
           </div>
           <div class="room-header-right">
-            <span id="user-count" class="user-count-badge">0 users</span>
             <!-- Room Code display (host only) -->
-            <div id="room-code-badge" class="room-code-badge hidden" title="Share this code with friends to join">
+            <div id="room-code-badge" class="room-code-badge hidden" title="Share this code with friends">
               <span class="room-code-label">ROOM CODE</span>
               <span id="room-code-value" class="room-code-value">-------</span>
               <button id="btn-copy-code" class="btn-copy" title="Copy code">
@@ -109,11 +101,7 @@
                 <svg id="check-icon" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               </button>
             </div>
-            <!-- Close Room button (host only) -->
-            <button id="btn-close-room" class="btn-close-room hidden" title="Close Room">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              <span>Close Room</span>
-            </button>
+            <span id="user-count" class="user-count-badge">1 user</span>
             <button id="btn-settings" class="btn-icon-only" title="Settings">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </button>
@@ -125,7 +113,6 @@
           <!-- User grid (voice area) -->
           <section class="voice-panel">
             <div id="user-grid" class="user-grid">
-              <!-- User tiles populated dynamically -->
               <div class="user-tile self" id="self-tile">
                 <div class="user-avatar-ring">
                   <div class="voice-ring"></div>
@@ -178,6 +165,85 @@
               </button>
             </div>
           </aside>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SETTINGS MODAL ─────────────────────── -->
+  <div id="settings-overlay" class="settings-overlay hidden">
+    <div class="settings-modal glass-card">
+      <div class="settings-header">
+        <h2 class="settings-title">Settings</h2>
+        <button id="btn-settings-close" class="btn-icon-only" title="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="general">General</button>
+        <button class="settings-tab" data-tab="network">Network</button>
+        <button class="settings-tab" data-tab="about">About</button>
+      </div>
+
+      <!-- General Tab -->
+      <div class="settings-panel active" id="tab-general">
+        <div class="settings-section">
+          <label class="settings-label" for="settings-username">Display Name</label>
+          <div class="settings-input-row">
+            <input type="text" id="settings-username" class="text-input" placeholder="Your name..." maxlength="24" />
+            <button id="btn-save-username" class="btn btn-primary settings-save-btn">Save</button>
+          </div>
+          <p class="settings-hint">This name is shown to others when you join a room.</p>
+        </div>
+      </div>
+
+      <!-- Network Tab -->
+      <div class="settings-panel" id="tab-network">
+        <div class="settings-section">
+          <label class="settings-label">Connection Ports</label>
+          <div class="settings-port-row">
+            <div class="settings-port-item">
+              <span class="settings-port-label">TCP (Voice Control)</span>
+              <span class="settings-port-value">7770</span>
+            </div>
+            <div class="settings-port-item">
+              <span class="settings-port-label">UDP (Voice Data)</span>
+              <span class="settings-port-value">7771</span>
+            </div>
+          </div>
+          <div class="settings-info-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="settings-info-icon"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <p>For WAN connections, forward ports <strong>7770 (TCP)</strong> and <strong>7771 (UDP)</strong> on your router to this machine.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- About Tab -->
+      <div class="settings-panel" id="tab-about">
+        <div class="settings-section settings-about">
+          <div class="about-logo">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width="48" height="48">
+              <path d="M17 20c0-3.87 3.13-7 7-7s7 3.13 7 7v4c0 3.87-3.13 7-7 7s-7-3.13-7-7v-4z" stroke="url(#about-grad)" stroke-width="2.5" fill="none"/>
+              <path d="M12 22v2c0 6.63 5.37 12 12 12s12-5.37 12-12v-2" stroke="url(#about-grad)" stroke-width="2.5" stroke-linecap="round"/>
+              <defs>
+                <linearGradient id="about-grad" x1="4" y1="4" x2="44" y2="44">
+                  <stop offset="0%" stop-color="#6C5CE7"/>
+                  <stop offset="100%" stop-color="#EC4899"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div>
+              <h3 class="about-name">Voxlink</h3>
+              <span class="about-version">v0.1.0</span>
+            </div>
+          </div>
+          <div class="about-badges">
+            <span class="about-badge">Zero servers</span>
+            <span class="about-badge">E2E encrypted</span>
+            <span class="about-badge">Open source</span>
+          </div>
+          <p class="about-desc">Fully serverless, peer-to-peer voice and text communication. All data travels directly between participants — nothing touches a cloud.</p>
         </div>
       </div>
     </div>

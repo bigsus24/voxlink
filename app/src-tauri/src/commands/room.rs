@@ -6,20 +6,18 @@ use chatcall_core::room::client::RoomClient;
 use chatcall_core::room::state::RoomConfig;
 use chatcall_net::{encode_ip, decode_ip, DEFAULT_TCP_PORT};
 
-// ── Shared response types ─────────────────────────────────────
+// ── Response types ────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoomInfo {
     pub room_name: String,
     pub is_host: bool,
-    /// 7-char VoxCode (only present when you are the host)
+    /// 7-char VoxCode (host only)
     pub room_code: Option<String>,
 }
 
 // ── Helpers ───────────────────────────────────────────────────
 
-/// Fetch the machine's public IPv4 from api.ipify.org.
-/// Fast — plain text response, no JSON parsing needed.
 async fn get_public_ip() -> Result<String, String> {
     let ip = reqwest::get("https://api.ipify.org")
         .await
@@ -30,25 +28,38 @@ async fn get_public_ip() -> Result<String, String> {
     Ok(ip.trim().to_string())
 }
 
+/// Stop any currently running host and free its ports.
+fn stop_existing_host(state: &AppState) {
+    let mut host_guard = state.room_host.lock();
+    if let Some(host) = host_guard.take() {
+        host.stop();
+    }
+}
+
 // ── Commands ──────────────────────────────────────────────────
 
-/// Create a room. Detects public IP → encodes to VoxCode → starts host.
-/// Returns the RoomInfo including the shareable code.
+/// Create (or re-create) a room. Stops any existing host first to free ports.
 #[tauri::command]
 pub async fn create_room(
     state: State<'_, AppState>,
     room_name: String,
 ) -> Result<RoomInfo, String> {
+    // ── Stop any already-running host so ports are freed ──────
+    stop_existing_host(&state);
+
+    // Give the OS a brief moment to reclaim the ports
+    tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+
     let username = state.profile.read().username.clone();
 
-    // 1. Get public IP and encode → VoxCode
+    // ── Get public IP → encode to VoxCode ─────────────────────
     let public_ip = get_public_ip().await?;
     let room_code = encode_ip(&public_ip)
         .map_err(|e| format!("Failed to encode IP: {e}"))?;
 
     tracing::info!("Public IP: {} → VoxCode: {}", public_ip, room_code);
 
-    // 2. Configure and launch the host
+    // ── Start host ────────────────────────────────────────────
     let config = RoomConfig {
         room_name: room_name.clone(),
         host_name: username,
@@ -59,10 +70,8 @@ pub async fn create_room(
     let host = RoomHost::new(config, state.event_tx.clone());
     host.start().await.map_err(|e| e.to_string())?;
 
-    // Host runs on background tasks — leaked intentionally for MVP.
-    let _ = Box::leak(Box::new(host));
-
-    // 3. Persist state
+    // ── Store host in AppState (replaces any previous) ────────
+    *state.room_host.lock() = Some(host);
     *state.is_in_room.write() = true;
     *state.is_host.write() = true;
     *state.room_name.write() = Some(room_name.clone());
@@ -77,23 +86,19 @@ pub async fn create_room(
     })
 }
 
-/// Join a room by 7-char VoxCode. Decodes the code → public IP → connects.
+/// Join a room by 7-char VoxCode.
 #[tauri::command]
 pub async fn join_by_code(
     state: State<'_, AppState>,
     code: String,
 ) -> Result<RoomInfo, String> {
-    // Decode the VoxCode → IP
     let host_ip = decode_ip(&code)
         .map_err(|e| format!("Invalid room code: {e}"))?;
-
     tracing::info!("Code '{}' → IP {}", code, host_ip);
-
-    // Connect using the decoded IP
     join_by_address(state, host_ip).await
 }
 
-/// Join a room directly by IP address (fallback / advanced users).
+/// Join a room directly by IP address.
 #[tauri::command]
 pub async fn join_room(
     state: State<'_, AppState>,
@@ -102,7 +107,6 @@ pub async fn join_room(
     join_by_address(state, host_address).await
 }
 
-/// Internal: connect to a host by IP string.
 async fn join_by_address(
     state: State<'_, AppState>,
     host_ip: String,
@@ -122,7 +126,6 @@ async fn join_by_address(
     *state.room_name.write() = Some(room_name.clone());
     *state.room_code.write() = None;
 
-    // Client runs via spawned tasks — leaked for MVP
     let _ = Box::leak(Box::new(client));
 
     tracing::info!("Joined room '{}'", room_name);
@@ -134,14 +137,15 @@ async fn join_by_address(
     })
 }
 
-/// Close the hosted room and return to lobby.
+/// Close the hosted room — stops the host and releases ports.
 #[tauri::command]
 pub async fn close_room(state: State<'_, AppState>) -> Result<(), String> {
+    stop_existing_host(&state);
     *state.is_in_room.write() = false;
     *state.is_host.write() = false;
     *state.room_name.write() = None;
     *state.room_code.write() = None;
-    tracing::info!("Room closed");
+    tracing::info!("Room closed — ports freed");
     Ok(())
 }
 

@@ -20,7 +20,7 @@ pub fn run() {
             let app_state = state::AppState::new(app.handle().clone());
             app.manage(app_state);
 
-            tracing::info!("ChatCall started");
+            tracing::info!("Lake started");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -38,5 +38,5 @@ pub fn run() {
             commands::settings::set_username,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running ChatCall");
+        .expect("error while running Lake");
 }

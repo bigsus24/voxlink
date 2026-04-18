@@ -57,6 +57,8 @@ pub struct RoomHost {
     state: Arc<RwLock<RoomState>>,
     event_tx: EventSender,
     is_running: Arc<RwLock<bool>>,
+    /// Abort handles for spawned tasks — aborted on stop() to release ports immediately
+    task_handles: Arc<parking_lot::Mutex<Vec<tokio::task::AbortHandle>>>,
 }
 
 impl RoomHost {
@@ -68,6 +70,7 @@ impl RoomHost {
             state: Arc::new(RwLock::new(state)),
             event_tx,
             is_running: Arc::new(RwLock::new(false)),
+            task_handles: Arc::new(parking_lot::Mutex::new(Vec::new())),
         }
     }
 
@@ -100,7 +103,7 @@ impl RoomHost {
         let is_running_tcp = is_running.clone();
         let udp_for_tcp = udp_channel.clone();
 
-        tokio::spawn(async move {
+        let tcp_task = tokio::spawn(async move {
             Self::tcp_accept_loop(
                 tcp_listener,
                 state_tcp,
@@ -114,7 +117,7 @@ impl RoomHost {
         let state_udp = state.clone();
         let is_running_udp = is_running.clone();
 
-        tokio::spawn(async move {
+        let udp_task = tokio::spawn(async move {
             Self::udp_relay_loop(udp_clone, state_udp, is_running_udp).await;
         });
 
@@ -123,9 +126,17 @@ impl RoomHost {
         let state_disc = state.clone();
         let is_running_disc = is_running.clone();
 
-        tokio::spawn(async move {
+        let disc_task = tokio::spawn(async move {
             Self::discovery_loop(config_disc, state_disc, is_running_disc).await;
         });
+
+        // Store abort handles so stop() can kill them immediately
+        {
+            let mut handles = self.task_handles.lock();
+            handles.push(tcp_task.abort_handle());
+            handles.push(udp_task.abort_handle());
+            handles.push(disc_task.abort_handle());
+        }
 
         // Emit room created event
         let _ = event_tx.send(RoomEvent::RoomCreated {
@@ -135,10 +146,15 @@ impl RoomHost {
         Ok(())
     }
 
-    /// Stop the host and disconnect all clients
+    /// Stop the host — aborts all spawned tasks, releasing ports immediately.
     pub fn stop(&self) {
         *self.is_running.write() = false;
+        // Abort all background tasks so TcpListener/UdpSocket drop right away
+        for handle in self.task_handles.lock().drain(..) {
+            handle.abort();
+        }
         let _ = self.event_tx.send(RoomEvent::RoomClosed);
+        tracing::info!("Room host stopped — ports released");
     }
 
     /// Get the current room state

@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   ChatCall — Main Application Controller
+   Lake — Main Application Controller
    ══════════════════════════════════════════════════════════════ */
 
 // ── Tauri IPC Bridge ────────────────────────────────────────
@@ -41,8 +41,6 @@ function initLobby() {
     const name = usernameInput.value.trim();
     state.username = name || 'User';
     avatarEl.textContent = name ? name[0].toUpperCase() : 'U';
-
-    // Update avatar color based on name
     const hue = hashStr(state.username) % 360;
     avatarEl.style.background = `linear-gradient(135deg, hsl(${hue}, 70%, 55%), hsl(${(hue + 40) % 360}, 70%, 50%))`;
   });
@@ -66,24 +64,18 @@ function initLobby() {
     }
   });
 
-  // Join a Room (accepts 7-char VoxCode OR raw IP address)
+  // Join a Room — accepts 7-char VoxCode or raw IP fallback
   btnJoin.addEventListener('click', async () => {
     const input = joinAddress.value.trim();
     if (!input) {
-      showStatus('Please enter a Room Code or IP address', true);
+      showStatus('Please enter a room code', true);
       return;
     }
 
     await setUsername(state.username);
 
-    // Detect: 7-char alphanumeric = VoxCode; otherwise treat as IP
     const isVoxCode = /^[A-Za-z0-9]{7}$/.test(input);
-
-    if (isVoxCode) {
-      showStatus('Decoding room code...');
-    } else {
-      showStatus('Connecting...');
-    }
+    showStatus(isVoxCode ? 'Connecting via room code...' : 'Connecting...');
 
     try {
       const command = isVoxCode ? 'join_by_code' : 'join_room';
@@ -102,7 +94,6 @@ function initLobby() {
     }
   });
 
-  // Enter key to join
   joinAddress.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') btnJoin.click();
   });
@@ -118,20 +109,25 @@ function enterRoom() {
   $('#self-avatar').textContent = state.username[0].toUpperCase();
   $('#user-count').textContent = `${state.users.length + 1} user${state.users.length > 0 ? 's' : ''}`;
 
-  // Update avatar color
   const hue = hashStr(state.username) % 360;
   $('#self-avatar').style.background = `linear-gradient(135deg, hsl(${hue}, 70%, 55%), hsl(${(hue + 40) % 360}, 70%, 50%))`;
 
-  // Show room code and close button for hosts
+  // Context-aware leave button: host sees "Close Room" tooltip, client sees "Leave Room"
+  const btnLeave = $('#btn-leave');
+  if (state.isHost) {
+    btnLeave.title = 'Close Room';
+    btnLeave.classList.add('is-host-leave');
+  } else {
+    btnLeave.title = 'Leave Room';
+    btnLeave.classList.remove('is-host-leave');
+  }
+
+  // Show room code badge for hosts
   if (state.isHost && state.roomCode) {
-    const badge = $('#room-code-badge');
-    const closeBtn = $('#btn-close-room');
-    badge.classList.remove('hidden');
-    closeBtn.classList.remove('hidden');
+    $('#room-code-badge').classList.remove('hidden');
     $('#room-code-value').textContent = state.roomCode;
   } else {
     $('#room-code-badge').classList.add('hidden');
-    $('#btn-close-room').classList.add('hidden');
   }
 
   initRoomControls();
@@ -143,17 +139,13 @@ function initRoomControls() {
   const chatInput = $('#chat-input');
   const btnSend = $('#btn-send');
 
-  // Leave room (client)
+  // Single leave/close button — context-aware
   btnLeave.addEventListener('click', async () => {
-    try { await invoke('leave_room'); } catch (e) { console.error('Leave error:', e); }
-    resetRoomState();
-    showView('lobby-view');
-  });
-
-  // Close room (host only)
-  const btnClose = $('#btn-close-room');
-  btnClose.addEventListener('click', async () => {
-    try { await invoke('close_room'); } catch (e) { console.error('Close error:', e); }
+    if (state.isHost) {
+      try { await invoke('close_room'); } catch (e) { console.error('Close error:', e); }
+    } else {
+      try { await invoke('leave_room'); } catch (e) { console.error('Leave error:', e); }
+    }
     resetRoomState();
     showView('lobby-view');
   });
@@ -166,7 +158,6 @@ function initRoomControls() {
       try {
         await navigator.clipboard.writeText(code);
       } catch {
-        // Fallback for environments without clipboard API
         const ta = document.createElement('textarea');
         ta.value = code;
         document.body.appendChild(ta);
@@ -174,7 +165,6 @@ function initRoomControls() {
         document.execCommand('copy');
         ta.remove();
       }
-      // Animate checkmark
       $('#copy-icon').classList.add('hidden');
       $('#check-icon').classList.remove('hidden');
       setTimeout(() => {
@@ -192,41 +182,96 @@ function initRoomControls() {
     $('#mic-off-icon').classList.toggle('hidden', !state.isMuted);
     $('#self-mute-icon').textContent = state.isMuted ? '🔇' : '🎤';
     $('#self-mute-icon').classList.toggle('muted', state.isMuted);
-
-    try {
-      await invoke('toggle_mute');
-    } catch (e) {
-      console.error('Mute error:', e);
-    }
+    try { await invoke('toggle_mute'); } catch (e) { console.error('Mute error:', e); }
   });
 
-  // Send chat message
+  // Chat
   const sendMessage = async () => {
     const text = chatInput.value.trim();
     if (!text) return;
-
-    addChatMessage({
-      username: state.username,
-      text,
-      timestamp: new Date(),
-      isSelf: true,
-    });
-
+    addChatMessage({ username: state.username, text, timestamp: new Date(), isSelf: true });
     chatInput.value = '';
-
-    try {
-      await invoke('send_message', { text });
-    } catch (e) {
-      console.error('Send error:', e);
-    }
+    try { await invoke('send_message', { text }); } catch (e) { console.error('Send error:', e); }
   };
 
   btnSend.addEventListener('click', sendMessage);
   chatInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+}
+
+// ── Settings Modal ──────────────────────────────────────────
+function initSettings() {
+  const overlay = $('#settings-overlay');
+  const btnOpen = $('#btn-settings');
+  const btnClose = $('#btn-settings-close');
+  const tabs = $$('.settings-tab');
+  const panels = $$('.settings-panel');
+  const usernameInput = $('#settings-username');
+  const btnSaveUsername = $('#btn-save-username');
+
+  // Open/close
+  btnOpen.addEventListener('click', () => {
+    // Pre-fill with current username
+    usernameInput.value = state.username;
+    overlay.classList.remove('hidden');
+  });
+
+  btnClose.addEventListener('click', () => overlay.classList.add('hidden'));
+
+  // Close on overlay backdrop click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.classList.add('hidden');
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.classList.contains('hidden')) {
+      overlay.classList.add('hidden');
     }
+  });
+
+  // Tab switching
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      $(`#tab-${tab.dataset.tab}`).classList.add('active');
+    });
+  });
+
+  // Save username
+  btnSaveUsername.addEventListener('click', async () => {
+    const newName = usernameInput.value.trim();
+    if (!newName) return;
+
+    state.username = newName;
+    // Update lobby input too
+    const lobbyInput = $('#username-input');
+    if (lobbyInput) {
+      lobbyInput.value = newName;
+      const hue = hashStr(newName) % 360;
+      $('#username-avatar').textContent = newName[0].toUpperCase();
+      $('#username-avatar').style.background = `linear-gradient(135deg, hsl(${hue}, 70%, 55%), hsl(${(hue + 40) % 360}, 70%, 50%))`;
+    }
+
+    await setUsername(newName);
+
+    // Visual feedback
+    btnSaveUsername.textContent = 'Saved ✓';
+    btnSaveUsername.style.background = `linear-gradient(135deg, #10b981, #059669)`;
+    setTimeout(() => {
+      btnSaveUsername.textContent = 'Save';
+      btnSaveUsername.style.background = '';
+    }, 2000);
+
+    overlay.classList.add('hidden');
+  });
+
+  // Enter to save username
+  usernameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') btnSaveUsername.click();
   });
 }
 
@@ -250,7 +295,6 @@ function addChatMessage({ username, text, timestamp, isSelf = false }) {
 
   container.appendChild(msgEl);
   container.scrollTop = container.scrollHeight;
-
   state.messages.push({ username, text, timestamp });
 }
 
@@ -311,10 +355,7 @@ function resetRoomState() {
   state.roomCode = null;
   state.users = [];
   state.messages = [];
-  // Hide host-only controls
   $('#room-code-badge').classList.add('hidden');
-  $('#btn-close-room').classList.add('hidden');
-  // Clear chat
   const container = $('#chat-messages');
   container.innerHTML = '<div class="chat-empty"><p>No messages yet. Say hi! 👋</p></div>';
 }
@@ -342,7 +383,7 @@ async function setUsername(username) {
   }
 }
 
-// ── Voice Level Animation (simulated for now) ───────────────
+// ── Voice Level Animation (simulated) ───────────────────────
 function animateVoiceLevel() {
   const bar = $('#voice-level');
   if (!state.isInRoom || state.isMuted) {
@@ -350,8 +391,6 @@ function animateVoiceLevel() {
     requestAnimationFrame(animateVoiceLevel);
     return;
   }
-
-  // Simulated voice level (will be connected to real audio data later)
   const level = Math.random() * 15 + 2;
   bar.style.width = `${level}%`;
   requestAnimationFrame(animateVoiceLevel);
@@ -360,6 +399,7 @@ function animateVoiceLevel() {
 // ── Initialize ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initLobby();
+  initSettings();
   animateVoiceLevel();
 
   // Load saved profile
@@ -368,7 +408,6 @@ document.addEventListener('DOMContentLoaded', () => {
       state.username = profile.username;
       $('#username-input').value = profile.username;
       $('#username-avatar').textContent = profile.username[0].toUpperCase();
-
       const hue = hashStr(profile.username) % 360;
       $('#username-avatar').style.background = `linear-gradient(135deg, hsl(${hue}, 70%, 55%), hsl(${(hue + 40) % 360}, 70%, 50%))`;
     }
