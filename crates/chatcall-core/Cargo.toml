@@ -18,3 +18,5 @@ parking_lot = { workspace = true }
 rand = { workspace = true }
 crossbeam-channel = { workspace = true }
 chrono = { version = "0.4", features = ["serde"] }
+local-ip-address = "0.6.11"
+igd = "0.12.1"

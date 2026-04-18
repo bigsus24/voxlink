@@ -130,12 +130,36 @@ impl RoomHost {
             Self::discovery_loop(config_disc, state_disc, is_running_disc).await;
         });
 
+        // Spawn UPnP auto-port-forwarder
+        let config_upnp = config.clone();
+        let upnp_task = tokio::task::spawn_blocking(move || {
+            tracing::info!("Searching for UPnP Internet Gateway Device...");
+            match igd::search_gateway(Default::default()) {
+                Ok(gw) => {
+                    tracing::info!("Found UPnP Gateway: {}", gw);
+                    if let Ok(std::net::IpAddr::V4(local_ip)) = local_ip_address::local_ip() {
+                        let tcp_addr = std::net::SocketAddrV4::new(local_ip, config_upnp.tcp_port);
+                        let udp_addr = std::net::SocketAddrV4::new(local_ip, config_upnp.udp_port);
+                        
+                        let _ = gw.add_port(igd::PortMappingProtocol::TCP, config_upnp.tcp_port, tcp_addr, 0, "Lake App TCP");
+                        let _ = gw.add_port(igd::PortMappingProtocol::UDP, config_upnp.udp_port, udp_addr, 0, "Lake App UDP");
+                        
+                        tracing::info!("UPnP Port Mapping successful! {} / {}", config_upnp.tcp_port, config_upnp.udp_port);
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("UPnP Gateway not found or error: {}", e);
+                }
+            }
+        });
+
         // Store abort handles so stop() can kill them immediately
         {
             let mut handles = self.task_handles.lock();
             handles.push(tcp_task.abort_handle());
             handles.push(udp_task.abort_handle());
             handles.push(disc_task.abort_handle());
+            handles.push(upnp_task.abort_handle());
         }
 
         // Emit room created event
@@ -153,6 +177,20 @@ impl RoomHost {
         for handle in self.task_handles.lock().drain(..) {
             handle.abort();
         }
+
+        // Remove UPnP mapping synchronously by firing off a new search
+        let tcp_port = self.config.tcp_port;
+        let udp_port = self.config.udp_port;
+        
+        // We spawn a short-lived sync task to remove mappings
+        tokio::task::spawn_blocking(move || {
+            if let Ok(gw) = igd::search_gateway(Default::default()) {
+                let _ = gw.remove_port(igd::PortMappingProtocol::TCP, tcp_port);
+                let _ = gw.remove_port(igd::PortMappingProtocol::UDP, udp_port);
+                tracing::info!("UPnP mappings removed");
+            }
+        });
+
         let _ = self.event_tx.send(RoomEvent::RoomClosed);
         tracing::info!("Room host stopped — ports released");
     }
